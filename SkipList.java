@@ -1,5 +1,4 @@
 package pxs176230;
-
 import java.util.Iterator;
 import java.util.NoSuchElementException;
 import java.util.Random;
@@ -141,8 +140,84 @@ public class SkipList<T extends Comparable<? super T>> {
 
 	// Iterate through the elements of list in sorted order
 	public Iterator<T> iterator() {
-		return null;
+		return new ListIterator();
 	}
+
+	public SkipListIterator<T> skipListIterator(){
+		return new ListIterator();
+	}
+
+	private class ListIterator implements SkipListIterator<T> {
+	    Entry<T> cursor;
+	    boolean isReady;
+	    ListIterator(){
+           cursor = head;
+           isReady = false;
+        }
+        public boolean hasNext(){
+           if(cursor.next[0]==tail) return false;
+           return true;
+        }
+        public T next(){
+	        cursor = cursor.next[0];
+	        isReady = true;
+	        return cursor.element;
+        }
+
+        public boolean hasPrevious(){
+	        if(cursor == head) return false;
+	        return true;
+        }
+
+        public T prev(){
+	        isReady = true;
+	        T element = cursor.element;
+	        cursor = cursor.prev;
+	        return element;
+        }
+        // add method inserts the element before the element that will be returned by call to next
+        public void add(T x){
+	        int lev = chooseLevel();
+	        Entry<T> newNode = new Entry<>(x,lev);
+
+	        if(cursor == head && cursor.next[0]!=tail && cursor.next[0].element.compareTo(x) < 0 ){
+                System.out.println("Can't insert this element as it violates ordering constraint");
+                return;
+            }
+            if(cursor.next[0] == tail && cursor != head && cursor.element.compareTo(x) > 0){
+                System.out.println("Can't insert this element as it violates ordering constraint");
+                return;
+            }
+            cursor.next[0].prev = newNode;
+            newNode.next[0] = cursor.next[0];
+            cursor.next[0] = newNode;
+            newNode.prev = cursor;
+            //
+            cursor = cursor.next[0];
+            size++;
+	    }
+
+        /**
+         * Removes the current element (retrieved by the most recent next())
+         * Remove can be called only if next has been called and the element has not been removed
+         */
+        public void remove(){
+            if(size == 0) {
+                System.out.println("List is empty.NoSuchElementException");
+                return;
+            }
+            if(!isReady) {
+                System.out.println("next or prev method not called. NoSuchElementException");
+                return;
+            }
+            cursor.prev.next[0] = cursor.next[0];
+            cursor.next[0].prev = cursor.prev;
+            //after removing curr, should cursor point to next or prev?
+            cursor = cursor.prev;
+            size--;
+        }
+
+    }
 
 	// Return last element of list
 	public T last() {
@@ -200,13 +275,28 @@ public class SkipList<T extends Comparable<? super T>> {
 		sk.add(3);
 		sk.add(7);
 		sk.add(4);
-		sk.remove(3);
+		/*sk.remove(3);
 		System.out.println(sk.first());
 		System.out.println(sk.last());
 		System.out.println(sk.ceiling(0));
 		System.out.println(sk.floor(0));
 		System.out.println(sk.get(2));
-		sk.printList();
+		sk.printList();*/
+		SkipListIterator<Integer> it = sk.skipListIterator();
+		/*while(it.hasNext()){
+		    System.out.println(it.next());
+        }*/
+		if(it.hasNext()){
+			it.next();
+			it.remove();
+		}
+		while(it.hasNext()){
+			System.out.println(it.next());
+		}
+		it.add(9);
+		while(it.hasPrevious()){
+			System.out.println(it.prev());
+		}
 
 	}
 }
