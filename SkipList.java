@@ -180,14 +180,21 @@ public class SkipList<T extends Comparable<? super T>> {
 	        int lev = chooseLevel();
 	        Entry<T> newNode = new Entry<>(x,lev);
 
+	        // if a value is inserted after head, checking only the next element range
 	        if(cursor == head && cursor.next[0]!=tail && cursor.next[0].element.compareTo(x) < 0 ){
                 System.out.println("Can't insert this element as it violates ordering constraint");
                 return;
             }
+            // if value is to be inserted before tail, checking only left range
             if(cursor.next[0] == tail && cursor != head && cursor.element.compareTo(x) > 0){
                 System.out.println("Can't insert this element as it violates ordering constraint");
                 return;
             }
+            // else check if x lies between left and right range
+            if((cursor.element!=null && cursor.element.compareTo(x) > 0) || (cursor.next[0].element!=null && cursor.next[0].element.compareTo(x) < 0)){
+				System.out.println("Can't insert this element as it violates ordering constraint");
+				return;
+			}
             cursor.next[0].prev = newNode;
             newNode.next[0] = cursor.next[0];
             cursor.next[0] = newNode;
@@ -288,7 +295,7 @@ public class SkipList<T extends Comparable<? super T>> {
         }*/
 		if(it.hasNext()){
 			it.next();
-			it.remove();
+			it.add(2);
 		}
 		while(it.hasNext()){
 			System.out.println(it.next());
