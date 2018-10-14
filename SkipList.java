@@ -13,15 +13,18 @@ public class SkipList<T extends Comparable<? super T>> {
 	Entry<T> head, tail;
 	int size;
 	Entry<T>[] last;
+	int[] steps;
 
 	static class Entry<E extends Comparable<? super E>> {
 		E element;
 		Entry<E>[] next;
+		int[] span;
 		Entry<E> prev;
 
 		public Entry(E x, int lev) {
 			element = x;
 			next = new Entry[lev];
+			span = new int[lev];
 			// add more code if needed
 		}
 
@@ -37,6 +40,7 @@ public class SkipList<T extends Comparable<? super T>> {
 		
 		for(int i = 0; i <33; i++) {
 			head.next[i] = tail;
+			head.span[i] = 0;
 		}
 		tail.prev = head;
 		
@@ -54,10 +58,24 @@ public class SkipList<T extends Comparable<? super T>> {
 		if (contains(x))
 			return false;
 
+		int step = 0;
 		Entry<T> node = new Entry<>(x, level);
 		for (int i = 0; i < level; i++) {
 			node.next[i] = last[i].next[i];
-			last[i].next[i] = node;
+			last[i].next[i] = node;			
+
+			if(node.next[i] != tail)
+				node.span[i] = last[i].span[i] - step;
+			else
+				node.span[i] = 0;
+		    last[i].span[i] = step + 1;
+		    step += steps[i];
+		}
+		
+		for(int i=level ; i < maxLevel; i++) {
+			if(last[i].next[i] != tail)
+				last[i].span[i] += 1;
+		    step += steps[i];
 		}
 		
 		node.next[0].prev = node;
@@ -69,8 +87,10 @@ public class SkipList<T extends Comparable<? super T>> {
 
 	private void find(T x) {
 		Entry<T> cur = head;
+		steps = new int[33];
 		for (int i = maxLevel - 1; i >= 0; i--) {
 			while (cur.next[i] != tail && cur.next[i].element.compareTo(x) < 0) {
+				steps[i] += cur.span[i];
 				cur = cur.next[i];
 			}
 			last[i] = cur;
@@ -110,14 +130,14 @@ public class SkipList<T extends Comparable<? super T>> {
 
 	// Return element at index n of list. First element is at index 0.
 	public T get(int n) {
-		return getLinear(n);
+		if(n<0 || n>size-1)
+			throw new NoSuchElementException();
+		
+		return getLog(n);
 	}
 
 	// O(n) algorithm for get(n)
 	public T getLinear(int n) {
-		if(n<0 || n>size-1)
-			throw new NoSuchElementException();
-		
 		Entry<T> cur = head.next[0];
 		int i=0;
 		while(cur!=tail && i<n) {
@@ -131,7 +151,16 @@ public class SkipList<T extends Comparable<? super T>> {
 	// O(log n) expected time for get(n). Requires maintenance of spans, as
 	// discussed in class.
 	public T getLog(int n) {
-		return null;
+		Entry<T> cur = head;
+		n += 1;
+		for(int lev=maxLevel-1; lev>=0; lev--) {
+			while(lev<cur.span.length && cur.span[lev] <= n && cur.span[lev] > 0) {
+				n -= cur.span[lev];
+				cur = cur.next[lev];
+			}
+			if (n==0) break;
+		}
+		return cur.element;
 	}
 
 	// Is the list empty?
@@ -144,16 +173,10 @@ public class SkipList<T extends Comparable<? super T>> {
 		return new ListIterator();
 	}
 
-	public SkipListIterator<T> skipListIterator(){
-		return new ListIterator();
-	}
-
-	private class ListIterator implements SkipListIterator<T> {
+	private class ListIterator implements Iterator<T> {
 	    Entry<T> cursor;
-	    boolean isReady;
 	    ListIterator(){
            cursor = head;
-           isReady = false;
         }
         public boolean hasNext(){
            if(cursor.next[0]==tail) return false;
@@ -161,70 +184,8 @@ public class SkipList<T extends Comparable<? super T>> {
         }
         public T next(){
 	        cursor = cursor.next[0];
-	        isReady = true;
 	        return cursor.element;
         }
-
-        public boolean hasPrevious(){
-	        if(cursor == head) return false;
-	        return true;
-        }
-
-        public T prev(){
-	        isReady = true;
-	        T element = cursor.element;
-	        cursor = cursor.prev;
-	        return element;
-        }
-        // add method inserts the element before the element that will be returned by call to next
-        public void add(T x){
-	        int lev = chooseLevel();
-	        Entry<T> newNode = new Entry<>(x,lev);
-
-	        // if a value is inserted after head, checking only the next element range
-	        if(cursor == head && cursor.next[0]!=tail && cursor.next[0].element.compareTo(x) < 0 ){
-                System.out.println("Can't insert this element as it violates ordering constraint");
-                return;
-            }
-            // if value is to be inserted before tail, checking only left range
-            if(cursor.next[0] == tail && cursor != head && cursor.element.compareTo(x) > 0){
-                System.out.println("Can't insert this element as it violates ordering constraint");
-                return;
-            }
-            // else check if x lies between left and right range
-            if((cursor.element!=null && cursor.element.compareTo(x) > 0) || (cursor.next[0].element!=null && cursor.next[0].element.compareTo(x) < 0)){
-				System.out.println("Can't insert this element as it violates ordering constraint");
-				return;
-			}
-            cursor.next[0].prev = newNode;
-            newNode.next[0] = cursor.next[0];
-            cursor.next[0] = newNode;
-            newNode.prev = cursor;
-            //
-            cursor = cursor.next[0];
-            size++;
-	    }
-
-        /**
-         * Removes the current element (retrieved by the most recent next())
-         * Remove can be called only if next has been called and the element has not been removed
-         */
-        public void remove(){
-            if(size == 0) {
-                System.out.println("List is empty.NoSuchElementException");
-                return;
-            }
-            if(!isReady) {
-                System.out.println("next or prev method not called. NoSuchElementException");
-                return;
-            }
-            cursor.prev.next[0] = cursor.next[0];
-            cursor.next[0].prev = cursor.prev;
-            //after removing curr, should cursor point to next or prev?
-            cursor = cursor.prev;
-            size--;
-        }
-
     }
 
 	// Return last element of list
@@ -287,6 +248,16 @@ public class SkipList<T extends Comparable<? super T>> {
 		Entry<T> cur = last[0].next[0];
 		for (int i = 0; i < cur.next.length; i++) {
 			last[i].next[i] = cur.next[i];
+			
+			if (last[i].next[i] != tail)
+				last[i].span[i] += cur.span[i]-1;
+			else
+				last[i].span[i] = 0;
+		}
+		
+		for(int i = cur.next.length; i < maxLevel; i++) {
+			if(last[i].next[i] != tail)
+				last[i].span[i] -= 1;
 		}
 		
 		cur.next[0].prev = cur.prev;
@@ -315,6 +286,18 @@ public class SkipList<T extends Comparable<? super T>> {
 		}
 		System.out.println();
 	}
+	
+	private void printLevels() {
+		for(int i=0; i<maxLevel;i++) {
+			Entry<T> cur = head;
+			System.out.print("Level " + i + ": ");
+			while(cur!=tail) {
+				System.out.print(cur.element + "(" + cur.span[i] + ")->");
+				cur = cur.next[i];
+			}
+			System.out.println("null");
+		}
+	}
 
 	public static void main(String[] args) {
 		SkipList<Integer> sk = new SkipList<>();
@@ -327,13 +310,24 @@ public class SkipList<T extends Comparable<? super T>> {
 
 		/*sk.remove(3);
 		System.out.println(sk.first());
+		sk.add(1);
+		sk.add(3);
+		sk.add(5);
+		sk.add(7);
+		sk.add(4);
+		sk.remove(3);
+		sk.remove(4);
+		/*System.out.println(sk.first());
 		System.out.println(sk.last());
 		System.out.println(sk.ceiling(0));
-		System.out.println(sk.floor(0));
+		System.out.println(sk.floor(0));*/
+		sk.printList();
+		sk.printLevels();
 		System.out.println(sk.get(2));
-		sk.printList();*/
-		SkipListIterator<Integer> it = sk.skipListIterator();
-		if(it.hasNext()){
+
+		sk.printList();
+		//SkipListIterator<Integer> it = sk.skipListIterator();
+	/*	if(it.hasNext()){
 		    System.out.println(it.next());
         }
         if(it.hasNext()){
@@ -341,7 +335,7 @@ public class SkipList<T extends Comparable<? super T>> {
 		}
 		while(it.hasPrevious()){
 			System.out.println(it.prev());
-		}
+		}*/
         /*if(it.hasNext()){
 			it.next();
 			it.add(2);
@@ -354,6 +348,7 @@ public class SkipList<T extends Comparable<? super T>> {
 			System.out.println(it.prev());
 		}
 */
+
 	}
 }
 
