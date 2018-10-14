@@ -138,13 +138,14 @@ public class SkipList<T extends Comparable<? super T>> {
 
 	// O(n) algorithm for get(n)
 	public T getLinear(int n) {
-		Entry<T> cur = head.next[0];
-		int i=0;
-		while(cur!=tail && i<n) {
-			cur=cur.next[0];
+		Iterator<T> it = iterator();
+		int i=-1;
+		T cur = null;
+		while(i<n && it.hasNext()) {
+			cur = it.next();
 			i++;
 		}
-		return cur.element;
+		return cur;
 	}
 
 	// Optional operation: Eligible for EC.
@@ -175,8 +176,10 @@ public class SkipList<T extends Comparable<? super T>> {
 
 	private class ListIterator implements Iterator<T> {
 	    Entry<T> cursor;
+	    boolean isReady;
 	    ListIterator(){
            cursor = head;
+           isReady = false;
         }
         public boolean hasNext(){
            if(cursor.next[0]==tail) return false;
@@ -184,7 +187,64 @@ public class SkipList<T extends Comparable<? super T>> {
         }
         public T next(){
 	        cursor = cursor.next[0];
+	        isReady = true;
 	        return cursor.element;
+        }
+         public boolean hasPrevious(){
+	        if(cursor == head) return false;
+	        return true;
+        }
+         public T prev(){
+	        isReady = true;
+	        T element = cursor.element;
+	        cursor = cursor.prev;
+	        return element;
+        }
+        // add method inserts the element before the element that will be returned by call to next
+        public void add(T x){
+	        int lev = chooseLevel();
+	        Entry<T> newNode = new Entry<>(x,lev);
+ 	        // if a value is inserted after head, checking only the next element range
+	        if(cursor == head && cursor.next[0]!=tail && cursor.next[0].element.compareTo(x) < 0 ){
+                System.out.println("Can't insert this element as it violates ordering constraint");
+                return;
+            }
+            // if value is to be inserted before tail, checking only left range
+            if(cursor.next[0] == tail && cursor != head && cursor.element.compareTo(x) > 0){
+                System.out.println("Can't insert this element as it violates ordering constraint");
+                return;
+            }
+            // else check if x lies between left and right range
+            if((cursor.element!=null && cursor.element.compareTo(x) > 0) || (cursor.next[0].element!=null && cursor.next[0].element.compareTo(x) < 0)){
+				System.out.println("Can't insert this element as it violates ordering constraint");
+				return;
+			}
+            cursor.next[0].prev = newNode;
+            newNode.next[0] = cursor.next[0];
+            cursor.next[0] = newNode;
+            newNode.prev = cursor;
+            //
+            cursor = cursor.next[0];
+            size++;
+	    }
+         /**
+         * Removes the current element (retrieved by the most recent next())
+         * Remove can be called only if next has been called and the element has not been removed
+         */
+        public void remove(){
+            if(size == 0) {
+                System.out.println("List is empty.NoSuchElementException");
+                return;
+            }
+            if(!isReady) {
+                System.out.println("next or prev method not called. NoSuchElementException");
+                return;
+            }
+            cursor.prev.next[0] = cursor.next[0];
+            cursor.next[0].prev = cursor.prev;
+            //after removing curr, should cursor point to next or prev?
+            cursor = cursor.prev;
+            size--;
         }
     }
 
@@ -279,10 +339,9 @@ public class SkipList<T extends Comparable<? super T>> {
 	}
 
 	private void printList() {
-		Entry<T> cur = head.next[0];
-		while (cur != tail) {
-			System.out.print(cur.element + " ");
-			cur = cur.next[0];
+		Iterator<T> it = iterator();
+		while(it.hasNext()) {
+			System.out.print(it.next() + " ");
 		}
 		System.out.println();
 	}
