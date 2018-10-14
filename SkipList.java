@@ -199,27 +199,37 @@ public class SkipList<T extends Comparable<? super T>> {
 	public void rebuild() {
         Entry<T>[] entryArray = new Entry[size];
         int maxLevel = (int)Math.ceil(Math.log(size)/Math.log(2));
+        //creates entry nodes and populates next pointers
 		rebuild(entryArray,0,size-1,maxLevel);
 		SkipList<T> newSkipList = new SkipList<>();
 		newSkipList.maxLevel = maxLevel;
+		//keeps track of previous pointers for each level
 		Entry<T>[] lastArray = new Entry[maxLevel];
+		//keeps track of previous indexes for each level
+		int[] indexArray = new int[maxLevel];
+		Arrays.fill(indexArray,-1);
 		Arrays.fill(lastArray,newSkipList.head);
 		Iterator<T> itr = this.iterator();
 		int index = 0;
 		while(itr.hasNext()){
 			entryArray[index].element = itr.next();
 			entryArray[index].prev = lastArray[0];
+			//updates prev and next pointer
 			for(int i = 0; i < entryArray[index].next.length; i++){
 				Entry<T> prev = lastArray[i];
 				Entry<T> next = prev.next[i];
 				prev.next[i] = entryArray[index];
 				entryArray[index].next[i] = next;
+				prev.span[i] = index - indexArray[i];
 				lastArray[i] = entryArray[index];
+				indexArray[i] = index;
 			}
 			index++;
 			newSkipList.size++;
 		}
+		newSkipList.tail.prev = lastArray[0];
 		this.head = newSkipList.head;
+		this.tail = newSkipList.tail;
 	}
 
 	//creates nextarray level using divide and conquer
@@ -301,13 +311,30 @@ public class SkipList<T extends Comparable<? super T>> {
 
 	public static void main(String[] args) {
 		SkipList<Integer> sk = new SkipList<>();
-        for(int i = 99 ; i >= 1; i--){
+        for(int i = 1000; i >= 1; i--){
         	sk.add(i);
 		}
-		//sk.printList();
+		System.out.println(sk.first());
+		System.out.println(sk.last());
+		System.out.println(sk.floor(1001));
+		System.out.println(sk.ceiling(1001));
+		/*Timer timer = new Timer();
+        timer.start();
+		sk.get(9999);
+		timer.end();*/
+		//System.out.println(timer);
 		//System.out.println(sk.maxLevel);
 	    sk.rebuild();
-
+		System.out.println(sk.first());
+		System.out.println(sk.last());
+		System.out.println(sk.floor(1001));
+		System.out.println(sk.ceiling(0));
+	    /*Timer timer = new Timer();
+	    timer.start();
+	    System.out.println(sk.get(990));
+	    timer.end();
+	    System.out.println(timer);*/
+        //sk.printLevels();
 		/*sk.remove(3);
 		System.out.println(sk.first());
 		sk.add(1);
@@ -321,11 +348,11 @@ public class SkipList<T extends Comparable<? super T>> {
 		System.out.println(sk.last());
 		System.out.println(sk.ceiling(0));
 		System.out.println(sk.floor(0));*/
-		sk.printList();
-		sk.printLevels();
+		//sk.printList();
+		/*sk.printLevels();
 		System.out.println(sk.get(2));
 
-		sk.printList();
+		sk.printList();*/
 		//SkipListIterator<Integer> it = sk.skipListIterator();
 	/*	if(it.hasNext()){
 		    System.out.println(it.next());
