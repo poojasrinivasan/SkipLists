@@ -242,7 +242,6 @@ public class SkipList<T extends Comparable<? super T>> {
             }
             cursor.prev.next[0] = cursor.next[0];
             cursor.next[0].prev = cursor.prev;
-            //after removing curr, should cursor point to next or prev?
             cursor = cursor.prev;
             size--;
         }
