@@ -1,4 +1,5 @@
 package pxs176230;
+import java.util.Arrays;
 import java.util.Iterator;
 import java.util.NoSuchElementException;
 import java.util.Random;
@@ -235,7 +236,47 @@ public class SkipList<T extends Comparable<? super T>> {
 	// list
 	// Not a standard operation in skip lists. Eligible for EC.
 	public void rebuild() {
+        Entry<T>[] entryArray = new Entry[size];
+        int maxLevel = (int)Math.ceil(Math.log(size)/Math.log(2));
+		rebuild(entryArray,0,size-1,maxLevel);
+		SkipList<T> newSkipList = new SkipList<>();
+		newSkipList.maxLevel = maxLevel;
+		Entry<T>[] lastArray = new Entry[maxLevel];
+		Arrays.fill(lastArray,newSkipList.head);
+		Iterator<T> itr = this.iterator();
+		int index = 0;
+		while(itr.hasNext()){
+			entryArray[index].element = itr.next();
+			entryArray[index].prev = lastArray[0];
+			for(int i = 0; i < entryArray[index].next.length; i++){
+				Entry<T> prev = lastArray[i];
+				Entry<T> next = prev.next[i];
+				prev.next[i] = entryArray[index];
+				entryArray[index].next[i] = next;
+				lastArray[i] = entryArray[index];
+			}
+			index++;
+			newSkipList.size++;
+		}
+		this.head = newSkipList.head;
+	}
 
+	//creates nextarray level using divide and conquer
+	private void rebuild(Entry<T>[] newArray,int low,int high,int level){
+		if(low <= high){
+			if(level==1){
+				newArray[low] = new Entry<>(null,level);
+			  if(newArray[high]==null){
+					newArray[high] = new Entry<>(null,level);
+				}
+			}
+			else {
+				int mid = (low + high) / 2;
+				newArray[mid] = new Entry<>(null, level);
+				rebuild(newArray, low, mid - 1, level - 1);
+				rebuild(newArray, mid + 1, high, level - 1);
+			}
+		}
 	}
 
 	// Remove x from list. Removed element is returned. Return null if x not in list
@@ -277,11 +318,13 @@ public class SkipList<T extends Comparable<? super T>> {
 
 	public static void main(String[] args) {
 		SkipList<Integer> sk = new SkipList<>();
-		sk.add(1);
-		sk.add(3);
-		sk.add(3);
-		sk.add(7);
-		sk.add(4);
+        for(int i = 99 ; i >= 1; i--){
+        	sk.add(i);
+		}
+		//sk.printList();
+		//System.out.println(sk.maxLevel);
+	    sk.rebuild();
+
 		/*sk.remove(3);
 		System.out.println(sk.first());
 		System.out.println(sk.last());
@@ -290,10 +333,16 @@ public class SkipList<T extends Comparable<? super T>> {
 		System.out.println(sk.get(2));
 		sk.printList();*/
 		SkipListIterator<Integer> it = sk.skipListIterator();
-		/*while(it.hasNext()){
-		    System.out.println(it.next());
-        }*/
 		if(it.hasNext()){
+		    System.out.println(it.next());
+        }
+        if(it.hasNext()){
+        	System.out.println(it.next());
+		}
+		while(it.hasPrevious()){
+			System.out.println(it.prev());
+		}
+        /*if(it.hasNext()){
 			it.next();
 			it.add(2);
 		}
@@ -304,6 +353,22 @@ public class SkipList<T extends Comparable<? super T>> {
 		while(it.hasPrevious()){
 			System.out.println(it.prev());
 		}
-
+*/
 	}
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
